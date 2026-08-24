@@ -1,0 +1,456 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Harbor Books API",
+    "version": "1.4.0",
+    "description": "A sample OpenAPI document for a neighborhood bookstore. Browse titles, place holds, and check out copies."
+  },
+  "servers": [
+    {
+      "url": "https://api.harborbooks.dev/v1",
+      "description": "Production"
+    },
+    {
+      "url": "https://sandbox.harborbooks.dev/v1",
+      "description": "Sandbox"
+    }
+  ],
+  "tags": [
+    { "name": "Books", "description": "Catalog titles" },
+    { "name": "Checkouts", "description": "Borrowing and returns" },
+    { "name": "Members", "description": "Library members" }
+  ],
+  "paths": {
+    "/books": {
+      "get": {
+        "tags": ["Books"],
+        "summary": "List books",
+        "description": "Returns a paginated list of titles in the catalog. Filter by availability or search text.",
+        "operationId": "listBooks",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Search title, author, or ISBN",
+            "schema": { "type": "string", "example": "narnia" }
+          },
+          {
+            "name": "available",
+            "in": "query",
+            "description": "When true, only books with at least one copy on the shelf",
+            "schema": { "type": "boolean", "example": true }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque pagination cursor from a previous response",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of books",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookList" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Books"],
+        "summary": "Add a book",
+        "description": "Creates a catalog record. Staff only.",
+        "operationId": "createBook",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Client-generated key so retries do not duplicate titles",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "New catalog title",
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BookDraft" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Book created",
+            "headers": {
+              "Location": {
+                "description": "URL of the new book",
+                "schema": { "type": "string", "format": "uri" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Book" }
+              }
+            }
+          },
+          "409": {
+            "description": "ISBN already exists",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation failed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/books/{bookId}": {
+      "get": {
+        "tags": ["Books"],
+        "summary": "Get a book",
+        "description": "Fetch a single title, including how many copies are on the shelf.",
+        "operationId": "getBook",
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "required": true,
+            "description": "Catalog identifier",
+            "schema": { "type": "string", "example": "bk_8f2a" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Book found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Book" }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown book",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Books"],
+        "summary": "Update a book",
+        "description": "Partial update of catalog fields.",
+        "operationId": "updateBook",
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "example": "bk_8f2a" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BookPatch" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated book",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Book" }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown book",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Books"],
+        "summary": "Remove a book",
+        "description": "Deletes a title if no copies are currently checked out.",
+        "operationId": "deleteBook",
+        "parameters": [
+          {
+            "name": "bookId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "example": "bk_8f2a" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Removed" },
+          "409": {
+            "description": "Copies are still checked out",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{memberId}": {
+      "get": {
+        "tags": ["Members"],
+        "summary": "Get a member",
+        "operationId": "getMember",
+        "parameters": [
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "example": "mb_104" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member profile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Member" }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown member",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkouts": {
+      "post": {
+        "tags": ["Checkouts"],
+        "summary": "Check out a book",
+        "description": "Creates a loan for a member if a copy is available.",
+        "operationId": "createCheckout",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CheckoutDraft" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Loan created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Checkout" }
+              }
+            }
+          },
+          "409": {
+            "description": "No copies available, or member is at loan limit",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkouts/{checkoutId}": {
+      "get": {
+        "tags": ["Checkouts"],
+        "summary": "Get a checkout",
+        "operationId": "getCheckout",
+        "parameters": [
+          {
+            "name": "checkoutId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "example": "co_91c" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loan details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Checkout" }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown checkout",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkouts/{checkoutId}/return": {
+      "post": {
+        "tags": ["Checkouts"],
+        "summary": "Return a book",
+        "description": "Marks a loan as returned and puts the copy back on the shelf.",
+        "operationId": "returnCheckout",
+        "parameters": [
+          {
+            "name": "checkoutId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "example": "co_91c" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returned loan",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Checkout" }
+              }
+            }
+          },
+          "409": {
+            "description": "Already returned",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Book": {
+        "type": "object",
+        "required": ["id", "title", "author", "isbn", "copiesAvailable"],
+        "properties": {
+          "id": { "type": "string", "example": "bk_8f2a" },
+          "title": { "type": "string", "example": "The Voyage of the Dawn Treader" },
+          "author": { "type": "string", "example": "C. S. Lewis" },
+          "isbn": { "type": "string", "example": "9780064405027" },
+          "publishedYear": { "type": "integer", "example": 1952 },
+          "copiesAvailable": { "type": "integer", "example": 2 },
+          "shelf": { "type": "string", "example": "Children's / Fantasy" }
+        }
+      },
+      "BookDraft": {
+        "type": "object",
+        "required": ["title", "author", "isbn"],
+        "properties": {
+          "title": { "type": "string" },
+          "author": { "type": "string" },
+          "isbn": { "type": "string" },
+          "publishedYear": { "type": "integer" },
+          "copies": { "type": "integer", "minimum": 1, "default": 1 },
+          "shelf": { "type": "string" }
+        }
+      },
+      "BookPatch": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "shelf": { "type": "string" },
+          "copiesAvailable": { "type": "integer" }
+        }
+      },
+      "BookList": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Book" }
+          },
+          "nextCursor": { "type": "string", "nullable": true, "example": "eyJvZmZzZXQiOjIwfQ" }
+        }
+      },
+      "Member": {
+        "type": "object",
+        "required": ["id", "name", "email", "status"],
+        "properties": {
+          "id": { "type": "string", "example": "mb_104" },
+          "name": { "type": "string", "example": "Mina Alvarez" },
+          "email": { "type": "string", "format": "email" },
+          "status": { "type": "string", "enum": ["active", "restricted", "closed"] },
+          "loansOpen": { "type": "integer", "example": 1 }
+        }
+      },
+      "CheckoutDraft": {
+        "type": "object",
+        "required": ["bookId", "memberId"],
+        "properties": {
+          "bookId": { "type": "string", "example": "bk_8f2a" },
+          "memberId": { "type": "string", "example": "mb_104" },
+          "dueOn": { "type": "string", "format": "date", "example": "2026-09-07" }
+        }
+      },
+      "Checkout": {
+        "type": "object",
+        "required": ["id", "bookId", "memberId", "status", "checkedOutAt"],
+        "properties": {
+          "id": { "type": "string", "example": "co_91c" },
+          "bookId": { "type": "string" },
+          "memberId": { "type": "string" },
+          "status": { "type": "string", "enum": ["open", "returned", "overdue"] },
+          "checkedOutAt": { "type": "string", "format": "date-time" },
+          "dueOn": { "type": "string", "format": "date" },
+          "returnedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string", "example": "not_found" },
+          "message": { "type": "string", "example": "No book exists with that id." },
+          "details": { "type": "object", "additionalProperties": true }
+        }
+      }
+    }
+  }
+}
