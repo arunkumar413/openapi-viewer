@@ -2,6 +2,8 @@
 
 A small React app for reading OpenAPI 3 and Swagger 2 documents. Paths and HTTP methods live in a sidebar. Selecting one fills the main pane with the request URL, path, method, parameters, request body, status codes, and response body.
 
+![OpenAPI Viewer screenshot](<screenshots/Screenshot 2026-08-24 at 6.57.25 PM.png>)
+
 ## Run locally
 
 ```bash
