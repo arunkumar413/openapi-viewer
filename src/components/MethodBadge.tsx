@@ -22,11 +22,15 @@ export function MethodBadge({
 }) {
   return (
     <span
-      className={cn(
+      className=
+      {
+        cn(
         'inline-flex items-center justify-center rounded font-mono font-semibold tracking-wide',
         compact ? 'h-5 min-w-12 px-1.5 text-[10px]' : 'h-6 min-w-14 px-2 text-[11px]',
         styles[method] ?? styles.head,
-      )}
+      )
+    
+    }
     >
       {methodLabel(method)}
     </span>

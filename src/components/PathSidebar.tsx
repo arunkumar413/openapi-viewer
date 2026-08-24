@@ -66,8 +66,8 @@ export function PathSidebar({
           </p>
         ) : (
           groups.map(([path, operations]) => (
-            <div key={path} className="mb-1">
-              <p className="truncate px-2 pt-2 pb-1 font-mono text-[12px] text-ink-muted">
+            <div key={path} className="mb-4 bg-olive-300 rounded-md">
+              <p className="truncate px-2 pt-2 pb-1 font-mono text-[18px] text-ink-muted font-bold">
                 {path}
               </p>
               <ul className="flex flex-col gap-0.5">
@@ -80,7 +80,7 @@ export function PathSidebar({
                         onClick={() => onSelect(operation)}
                         className={cn(
                           'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left',
-                          selected ? 'bg-accent-soft' : 'hover:bg-line/70',
+                          selected ? 'bg-green-100' : 'hover:bg-line/70',
                         )}
                       >
                         <MethodBadge method={operation.method} compact />
