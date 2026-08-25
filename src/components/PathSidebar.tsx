@@ -16,9 +16,13 @@ export function PathSidebar({
   onQueryChange: (value: string) => void
   onSelect: (operation: Operation) => void
 }) {
-  const needle = query.trim().toLowerCase()
+  const tokens = query
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
   const filtered = spec.operations.filter((operation) => {
-    if (!needle) return true
+    if (tokens.length === 0) return true
     const haystack = [
       operation.path,
       operation.method,
@@ -29,7 +33,7 @@ export function PathSidebar({
       .filter(Boolean)
       .join(' ')
       .toLowerCase()
-    return haystack.includes(needle)
+    return tokens.every((token) => haystack.includes(token))
   })
 
   const groups = groupOperations(filtered)
