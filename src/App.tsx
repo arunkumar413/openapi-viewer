@@ -1,21 +1,21 @@
 import { Menu, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import sampleSpec from '@/data/sample-openapi.json'
+import { bundledSpecs } from '@/data/specs'
 import { LoadSpec } from '@/components/LoadSpec'
 import { OperationDetail } from '@/components/OperationDetail'
 import { PathSidebar } from '@/components/PathSidebar'
 import { Button } from '@/components/ui/button'
 import {
   parseOpenApiDocument,
-  parseOpenApiValue,
   type Operation,
   type ParsedSpec,
 } from '@/lib/openapi'
 
-const bundledSpec = parseOpenApiValue(sampleSpec)
+const bundledSpec = bundledSpecs[0].spec
 
 export default function App() {
   const [spec, setSpec] = useState<ParsedSpec>(bundledSpec)
+  const [selectedBundledId, setSelectedBundledId] = useState(bundledSpecs[0].id)
   const [selectedId, setSelectedId] = useState<string>(
     bundledSpec.operations[0]?.id ?? '',
   )
@@ -34,6 +34,7 @@ export default function App() {
 
   function applySpec(next: ParsedSpec) {
     setSpec(next)
+    setSelectedBundledId('')
     setSelectedId(next.operations[0]?.id ?? '')
     setServerIndex(0)
     setQuery('')
@@ -119,6 +120,29 @@ export default function App() {
           >
             <Menu className="size-5" />
           </Button>
+          <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+            <span className="hidden text-ink-muted sm:inline">Document</span>
+            <select
+              value={selectedBundledId}
+              onChange={(event) => {
+                const bundled = bundledSpecs.find(({ id }) => id === event.target.value)
+                if (bundled) {
+                  applySpec(bundled.spec)
+                  setSelectedBundledId(bundled.id)
+                }
+              }}
+              className="h-9 min-w-0 flex-1 rounded-md border border-line bg-paper px-2 text-sm text-ink outline-none focus:border-accent sm:max-w-xs"
+            >
+              <option value="" disabled>
+                {selectedBundledId ? 'Select bundled document' : `${spec.title} (loaded)`}
+              </option>
+              {bundledSpecs.map((bundled) => (
+                <option key={bundled.id} value={bundled.id}>
+                  {bundled.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="flex min-w-0 flex-1 items-center gap-2 text-sm">
             <span className="hidden text-ink-muted sm:inline">Server</span>
             <select
